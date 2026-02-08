@@ -183,7 +183,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="p-6 border border-current bg-current/5">
                             <h4 class="text-xs uppercase mb-2">POWER_RESERVE</h4>
-                            <div class="text-4xl font-bold" id="batt-val">--%</div>
+                            <div class="text-4xl font-bold" id="batt-val">SYNCING...</div>
                         </div>
                         <div class="p-6 border border-current bg-current/5">
                             <h4 class="text-xs uppercase mb-2">THERMAL_STATE</h4>
@@ -280,12 +280,11 @@
         }
 
         document.getElementById('mobile-input-trigger').addEventListener('input', (e) => {
-            // Check if user is typing or if it was a deletion
             const newVal = e.target.value;
             if (newVal.length > 0) {
                 simulateType();
             }
-            e.target.value = ""; // Clear for next character
+            e.target.value = ""; 
         });
 
         function simulateType() {
@@ -432,12 +431,37 @@
             initBatt();
         }
 
+        // --- BATTERY SYNC LOGIC ---
         async function initBatt() {
+            const battDisplay = document.getElementById('batt-val');
             try {
-                const b = await navigator.getBattery();
-                const u = () => document.getElementById('batt-val').innerText = `${Math.round(b.level * 100)}%`;
-                b.addEventListener('levelchange', u); u();
-            } catch(e) { document.getElementById('power-val').innerText = "100%"; }
+                if ('getBattery' in navigator) {
+                    const battery = await navigator.getBattery();
+                    
+                    const updateBatteryUI = () => {
+                        const level = Math.round(battery.level * 100);
+                        battDisplay.innerText = `${level}%`;
+                        
+                        // Optional: Visual warning if low
+                        if (level < 20) {
+                            battDisplay.classList.add('text-red-500', 'animate-pulse');
+                        } else {
+                            battDisplay.classList.remove('text-red-500', 'animate-pulse');
+                        }
+                    };
+
+                    // Initial call and event listeners
+                    updateBatteryUI();
+                    battery.addEventListener('levelchange', updateBatteryUI);
+                    battery.addEventListener('chargingchange', updateBatteryUI);
+                } else {
+                    // Fallback for browsers that don't support the Battery API
+                    battDisplay.innerText = "EXT_PWR";
+                }
+            } catch (error) {
+                console.warn("Battery API restricted or unavailable:", error);
+                battDisplay.innerText = "100%"; 
+            }
         }
     </script>
 </body>
